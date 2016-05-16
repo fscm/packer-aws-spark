@@ -1,0 +1,56 @@
+{
+  "variables": {
+    "aws_access_key": "{{env `aws_access_key`}}",
+    "aws_secret_key": "{{env `aws_secret_key`}}",
+    "aws_region": "{{env `aws_region`}}",
+    "aws_base_ami": "{{env `aws_base_ami`}}",
+    "spark_version": "{{env `spark_version`}}",
+    "hadoop_version": "{{env `hadoop_version`}}",
+    "java_version": "{{env `java_version`}}"
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "region": "{{user `aws_region`}}",
+    "source_ami": "{{user `aws_base_ami`}}",
+    "instance_type": "t2.micro",
+    "ssh_username": "admin",
+    "associate_public_ip_address": true,
+    "ami_name": "spark-{{user `spark_version`}}_{{user `hadoop_version`}}-({{isotime \"20060102150405\"}})"
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "echo 'Waiting 180 seconds for cloud-init to update /etc/apt/sources.list'",
+        "timeout 180 /bin/bash -c 'until stat /var/lib/cloud/instance/boot-finished &>/dev/null; do echo waiting...; sleep 10; done'"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "files/packages/oracle-java8-jre_{{user `java_version`}}_amd64.deb",
+      "destination": "/home/admin/oracle-java8-jre_{{user `java_version`}}_amd64.deb"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo apt-get update",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y daemontools daemontools-run",
+        "sudo dpkg -i /home/admin/oracle-java8-jre_{{user `java_version`}}_amd64.deb"
+      ]
+    },
+    {
+      "type": "shell",
+      "script": "scripts/spark/spark-install.sh",
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `spark_version`}} {{user `hadoop_version`}}"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo rm -f /home/admin/oracle-java8-jre_{{user `java_version`}}_amd64.deb",
+        "sudo sync"
+      ]
+    }
+  ]
+}
