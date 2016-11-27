@@ -1,0 +1,35 @@
+#
+# Systemd script to manage Spark Master.
+#
+# Copyright 2016, Frederico Martins
+#   Author: Frederico Martins <http://github.com/fscm>
+#
+# SPDX-License-Identifier: MIT
+#
+
+[Unit]
+Description=Spark Master
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=spark
+Group=spark
+WorkingDirectory=/srv/spark
+PermissionsStartOnly=true
+ExecStartPre=-/usr/bin/install -o spark -g spark -d /var/run/spark
+ExecStart=/srv/spark/sbin/start-master.sh
+ExecStop=/srv/spark/sbin/stop-master.sh
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=infinity
+LimitMEMLOCK=infinity
+LimitNPROC=infinity
+LimitAS=infinity
+SuccessExitStatus=143
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target
