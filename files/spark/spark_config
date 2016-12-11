@@ -1,0 +1,219 @@
+#!/bin/bash
+#
+# Shell script to configure some options of Spark Master.
+#
+# Copyright 2016, Frederico Martins
+#   Author: Frederico Martins <http://github.com/fscm>
+#
+# SPDX-License-Identifier: MIT
+#
+# This progam is free software. You can use it and/or modify it under the
+# terms of the MIT License.
+#
+
+set -e
+
+BASEDIR=$(dirname $0)
+BASENAME=$(basename $0)
+__TS__=$(date +%Y%m%d%H%M%S)
+
+# Configuration files
+SPARK_DEFAULTS="/srv/spark/conf/spark-defaults.conf"
+SPARK_ENV="/srv/spark/conf/spark-env.sh"
+SPARK_WORKER_SYSTEMD="/lib/systemd/system/spark-worker.service"
+
+# Variables
+SPARK_DISABLE=0
+SPARK_ENABLE=0
+SPARK_START=0
+SPARK_WAIT=0
+
+SPARK_CORES=
+SPARK_INSTANCE_TYPE=
+SPARK_INSTANCES=
+SPARK_KRYO_BUFFER=
+SPARK_LOG_AGE=
+SPARK_LOG_FILES=
+SPARK_MEMORY=
+SPARK_PUBLIC_NAME=
+SPARK_SERVER_ADDRESS=
+
+# Usage
+function show_usage() {
+  echo "Usage: ${BASENAME} [options]i <instance_type>"
+  echo "  instance type:"
+  echo "    master    Configure Spark Master."
+  echo "    worker    Configure Spark Worker."
+  echo "    history   Configure Spark History."
+  echo "  options:"
+  echo "    -c <CORES>    Set the number of Executor cores (default value"
+  echo "                  is the number of cpu cores/threads)."
+  echo "    -D            Disable starting service at boot."
+  echo "    -E            Enable starting service at boot."
+  echo "    -h <AGE>      Set how old the job history files will have to be"
+  echo "                  before being deleted (default value is '15d')."
+  echo "    -i <NUMBER>   Set the number of Executor instances (default"
+  echo "                  value is '1')."
+  echo "    -k <SIZE>     Set the size of the Kryoserializer buffer (default"
+  echo "                  value is '16m')."
+  echo "    -m <MEMORY>   Set the Spark Executor maximum heap size (default"
+  echo "                  value is 80% of the server memory)."
+  echo "    -p <ADDRESS>  Set the public DNS name of the Spark instance"
+  echo "                  (default value is the server FQDN)."
+  echo "    -r <NUMBER>   Set the maximum number of log files kept by the"
+  echo "                  Executer log rotator (default value is '15')."
+  echo "    -s <ADDRESS>  Set the Spark Master address (default value is"
+  echo "                  'localhost')."
+  echo "    -S            Start the service after configuring it."
+  echo "    -W <SECONDS>  Wait the amount of seconds before starting the"
+  echo "                  service (default value is '0')."
+}
+
+# Options parsing
+while getopts ":c:DEh:i:k:m:p:r:s:SW:" opt; do
+  case $opt in
+    c)
+      SPARK_CORES=${OPTARG}
+      ;;
+    D)
+      SPARK_DISABLE=1
+      ;;
+    E)
+      SPARK_ENABLE=1
+      ;;
+    h)
+      SPARK_LOG_AGE=${OPTARG}
+      ;;
+    i)
+      SPARK_INSTANCES=${OPTARG}
+      ;;
+    k)
+      SPARK_KRYO_BUFFER=${OPTARG}
+      ;;
+    m)
+      SPARK_MEMORY=${OPTARG}
+      ;;
+    p)
+      SPARK_PUBLIC_NAME=${OPTARG}
+      ;;
+    r)
+      SPARK_LOG_FILES=${OPTARG}
+      ;;
+    s)
+      SPARK_SERVER_ADDRESS=${OPTARG}
+      ;;
+    S)
+      SPARK_START=1
+      ;;
+    W)
+      SPARK_WAIT=${OPTARG}
+      ;;
+    \?)
+      echo >&2 "  [ERROR] Invalid option: -${OPTARG}"
+      exit 1
+      ;;
+    :)
+      echo >&2 "  [ERROR] Option -${OPTARG} requires an argument"
+      exit 2
+      ;;
+  esac
+done
+
+# Check arguments
+if [[ $# -eq 0 ]]; then
+  show_usage
+  exit 3
+fi
+
+# Check permissions
+if [[ $EUID -ne 0 ]]; then
+  echo >&2 "  [ERROR] This script requires privileged access to system files"
+  exit 4
+fi
+
+if [[ "${SPARK_ENABLE}" -gt 0 ]] && [[ "${SPARK_DISABLE}" -gt 0 ]]; then
+  echo >&2 "  [ERROR] Enable (-e) and Disable (-d) options can not be used together."
+  exit 5
+fi
+
+# Set the instance type
+shift $((OPTIND-1))
+SPARK_INSTANCE_TYPE=${1,,}
+if [[ "x${SPARK_INSTANCE_TYPE}" = "x" ]]; then
+  echo >&2 "  [ERROR] Instance type not set. Execute without arguments for help"
+  exit 6
+fi
+if ! [[ "${SPARK_INSTANCE_TYPE}" =~ ^(master|worker|history)$ ]]; then
+  echo >&2 "  [ERROR] Invalid instance type"
+  exit 7
+fi
+echo "  [INFO] Configuring Spark ${SPARK_INSTANCE_TYPE^}"
+
+# Backup configuration files
+if [[ -f ${SPARK_DEFAULTS} ]]; then
+  cp ${SPARK_DEFAULTS} ${SPARK_DEFAULTS}.${__TS__}.bck
+fi
+if [[ -f ${SPARK_ENV} ]]; then
+  cp ${SPARK_ENV} ${SPARK_ENV}.${__TS__}.bck
+fi
+
+# Set the number of executor cores
+if [[ "x${SPARK_CORES}" != "x" ]]; then
+  sed -i -r -e "s/(SPARK_EXECUTOR_CORES=).*/\1\"${SPARK_CORES}\"/" ${SPARK_ENV}
+fi
+
+# Set the number of executor instances
+if [[ "x${SPARK_INSTANCES}" != "x" ]]; then
+  sed -i -r -e "s/(SPARK_EXECUTOR_INSTANCES=).*/\1\"${SPARK_INSTANCES}\"/" ${SPARK_ENV}
+fi
+
+# Set the executor maximum heap size
+if [[ "x${SPARK_MEMORY}" != "x" ]]; then
+  sed -i -r -e "s/(SPARK_EXECUTOR_MEMORY=).*/\1\"${SPARK_MEMORY}\"/" ${SPARK_ENV}
+fi
+
+# Set the public dns name
+if [[ "x${SPARK_PUBLIC_NAME}" != "x" ]]; then
+  sed -i -r -e "s/(SPARK_PUBLIC_DNS=).*/\1\"${SPARK_PUBLIC_NAME}\"/" ${SPARK_ENV}
+fi
+
+# set the maximum age for the history files
+if [[ "x${SPARK_LOG_AGE}" != "x" ]]; then
+  sed -i -r -e "s/(spark.history.fs.cleaner.maxAge[ ]+).*/\1${SPARK_LOG_AGE}/" ${SPARK_DEFAULTS}
+fi
+
+# set the kryoserializer buffer size
+if [[ "x${SPARK_KRYO_BUFFER}" != "x" ]]; then
+  sed -i -r -e "s/(spark.kryoserializer.buffer[ ]+).*/\1${SPARK_KRYO_BUFFER}/" ${SPARK_DEFAULTS}
+fi
+
+# set the maximum log files kept by the executor
+if [[ "x${SPARK_LOG_FILES}" != "x" ]]; then
+  sed -i -r -e "s/(spark.executor.logs.rolling.maxRetainedFiles[ ]+).*/\1${SPARK_LOG_FILES}/" ${SPARK_DEFAULTS}
+fi
+
+# Set the spark master address
+if [[ "x${SPARK_SERVER_ADDRESS}" != "x" ]]; then
+  sed -i -r -e "/ExecStart/ s/:\/\/.*:/:\/\/${SPARK_SERVER_ADDRESS}:/" ${SPARK_WORKER_SYSTEMD}
+  systemctl daemon-reload
+fi
+
+# Enable the service
+[[ "${SPARK_ENABLE}" -gt 0 ]] && systemctl disable spark-${SPARK_INSTANCE_TYPE}.service
+
+# Disable the service
+[[ "${SPARK_DISABLE}" -gt 0 ]] && systemctl disable spark-${SPARK_INSTANCE_TYPE}.service
+
+# Start the service
+if [[ "${SPARK_START}" -gt 0 ]]; then
+  echo "  [INFO] Spark ${SPARK_INSTANCE_TYPE^} will start in ${SPARK_WAIT} second(s)..."
+  nohup sh -c "sleep ${SPARK_WAIT} ; systemctl start spark-${SPARK_INSTANCE_TYPE}.service" &> /dev/null &
+fi
+
+# Clean up unneeded backups
+diff -q ${SPARK_DEFAULTS} ${SPARK_DEFAULTS}.${__TS__}.bck &> /dev/null && rm -f ${SPARK_DEFAULTS}.${__TS__}.bck || true
+diff -q ${SPARK_ENV} ${SPARK_ENV}.${__TS__}.bck &> /dev/null && rm -f ${SPARK_ENV}.${__TS__}.bck || true
+
+# All done
+echo "  [INFO] Configuration(s) successfully updated"
+exit 0

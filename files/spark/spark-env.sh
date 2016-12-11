@@ -12,6 +12,6 @@ SPARK_WORKER_DIR="/srv/spark/work"
 
 SPARK_LOCAL_IP="0.0.0.0"
 SPARK_MASTER_HOST="0.0.0.0"
-SPARK_PUBLIC_DNS="localhost"
+SPARK_PUBLIC_DNS="$(hostname -f)"
 
 PYTHONPATH=$SPARK_HOME/python/:$SPARK_HOME/python/lib/:$SPARK_HOME/python/lib/py4j.zip:$PYTHONPATH
