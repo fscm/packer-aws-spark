@@ -4,8 +4,8 @@ AMI that should be used to create virtual machines with Apache Spark installed.
 
 ## Synopsis
 
-This script will create an AMI with Apache Spark installed and with all of
-the required initialization scripts.
+This script will create an AMI with Apache Spark installed and with all of the
+required initialization scripts.
 
 The AMI resulting from this script should be the one used to instantiate a
 Spark server (master or worker).
@@ -14,16 +14,17 @@ Spark server (master or worker).
 
 There are a couple of things needed for the script to work.
 
-### Prerequisities
+### Prerequisites
 
-Packer and AWS Command Line Interface tools need to be installed on your
-local computer.
+Packer and AWS Command Line Interface tools need to be installed on your local
+computer.
 To build a base image you have to know the id of the latest Debian AMI files
 for the region where you wish to build the AMI.
 
 #### Packer
 
-Packer installation instructions can be found [here](https://www.packer.io/docs/installation.html).
+Packer installation instructions can be found
+[here](https://www.packer.io/docs/installation.html).
 
 #### AWS Command Line Interface
 
@@ -32,7 +33,7 @@ AWS Command Line Interface installation instructions can be found [here](http://
 #### Debian AMI's
 
 A list of all the Debian AMI id's can be found at the debian official page:
-[Debian oficial Amazon EC2 Images"](https://wiki.debian.org/Cloud/AmazonEC2Image/)
+[Debian oficial Amazon EC2 Images](https://wiki.debian.org/Cloud/AmazonEC2Image/)
 
 ### Usage
 
@@ -41,83 +42,138 @@ few options.
 
 ```
 Usage:
-  packer build -var 'aws_access_key=AWS_ACCESS_KEY' -var 'aws_secret_key=<AWS_SECRET_KEY>' -var 'aws_region=<AWS_REGION>' -var 'aws_base_ami=<BASE_IMAGE>' -var 'spark_version=<SPARK_VERSION>' -var 'hadoop_version=<HADOOP_VERSION>' -var 'java_version=<JAVA_VERSION>' spark.json
-Options:
-  aws_access_key     the aws access key for your user.
-  aws_secret_key     the aws secret key for your user.
-  aws_region         the region where the ami will be created.
-  aws_base_ami       the debian base image id to use for the build.
-  spark_version      the spark version to install.
-  hadoop_version     the hadoop version used by spark.
-  java_version       the java version used by cassandra (will be installed).
+  packer build \
+    -var 'aws_access_key=AWS_ACCESS_KEY' \
+    -var 'aws_secret_key=<AWS_SECRET_KEY>' \
+    -var 'aws_region=<AWS_REGION>' \
+    -var 'aws_base_ami=<BASE_IMAGE>' \
+    -var 'spark_version=<SPARK_VERSION>' \
+    -var 'spark_hadoop_version=<HADOOP_VERSION>' \
+    [-var 'option=value'] \
+    spark.json
 ```
 
-### Instantiate a Server
+#### Script Options
 
-In order to end up with a functional Spark server some configurations have to
-be performed after instantiating a new server.
+- `aws_access_key` - *[required]* The AWS access key.
+- `aws_ami_name` - The AMI name (default value: "spark").
+- `aws_ami_name_prefix` - Prefix for the AMI name (default value: "").
+- `aws_base_ami` - *[required]* The AWS base AMI id to use. See [here](https://wiki.debian.org/Cloud/AmazonEC2Image/) for a list of available options.
+- `aws_instance_type` - The instance type to use for the build (default value: "t2.micro").
+- `aws_region` - *[required]* The regions were the build will be performed.
+- `aws_secret_key` - *[required]* The AWS secret key.
+- `java_build_number` - Java build number (default value: "15").
+- `java_major_version` - Java major version (default value: "8").
+- `java_update_version` - Java update version (default value: "112").
+- `scala_short_version` - Scala short version (default value: "2.11"). Setting this option also requires setting the `scala_version` option.
+- `scala_version` - Scala version (default value: "2.11.8"). Seting this option may also require setting the `scala_short_version` option.
+- `spark_hadoop_version` - *[required]* Hadoop version of the Spark package.
+- `spark_version` - *[required]* Spark version.
 
-#### Configuring the Master
+### Instantiate a Cluster
+
+In order to end up with a functional Spark Cluster some configurations have to
+be performed after instantiating the servers.
+
+To help perform those configurations a small script is included on the AWS
+image. The script is called **spark_config**.
+
+#### Configuration Script
+
+The script can and should be used to set some of the Spark options as well as
+setting the Spark service to start at boot.
+
+```
+Usage: spark_config [options] <instance_type>
+```
+
+##### Instance Type
+
+The script can only configure one instance at a time. Setting a instance type
+is **required** by the script.
+
+- `master` - Treats the configuration options as if it was a Spark Master instance.
+- `worker` - Treats the configuration options as if it was a Spark Worker instance.
+- `history` - Treats the configuration options as if it was a Spark History instance.
+
+##### Options
+
+* `-c <CORES>` - *[worker]* Sets the number of Executor cores that Spark Executor will use (default value is the number of cpu cores/threads).
+* `-D` - *[master,worker,history]* Disables the respective Spark service from start at boot time.
+* `-E` - *[master,worker,history]* Enables the respective Spark service to start at boot time.
+* `-h <AGE>` - *[master,worker,history]* Sets how old the job history files will have to be before being deleted on the server (default value is '15d').
+* `-i <NUMBER>` - *[worker]* Sets the number of Spark Executor instances that will de started (default value is '1').
+* `-k <SIZE>` - *[master,worker,history]* Sets the size of the Kryo Serializer buffer (default value is '16m'). Values should be provided following the same Java heap nomenclature.
+* `-m <MEMORY>` - *[worker]* Sets the Spark Executor maximum heap size (default value is 80% of the server memory). Values should be provided following the same Java heap nomenclature.
+* `-p <ADDRESS>` - *[master,worker,history]* Sets the public DNS name of the Spark instance (default value is the server FQDN). This is the value that the instance will report as the server address on all the url's (including the ones on the Spark UI).
+* `-r <NUMBER>` - *[worker]* Sets the maximum number of log files kept by the Executer log rotator (default value is '15').
+* `-s <ADDRESS>` - *[worker]* Sets the Spark Master address to which the Spark Worker will connect to (default value is 'localhost').
+* `-S` - *[master,worker,history]* Starts the respective Spark service after performing the required configurations (if any given).
+* `-W <SECONDS>` - *[master,worker,history]* Waits the specified amount of seconds before starting the respective Spark service (default value is '0').
+
+#### Configuring the Spark Master Instance
 
 To prepare an instance to act as a Spark Master the following steps need to
 be performed.
 
-Create a configuration file, located at /opt/service/spark-master/override.env
-with the required information:
-
-* SPARK_DAEMON_MEMORY is the memory that should be alocated for the Java heap (will default to 512m)
-
-Here is an example of how the configuration file can be created:
+Run the configuration tool (*spark_config*) to configure the instance as a
+Spark Master server.
 
 ```
-echo "SPARK_DAEMON_MEMORY=1g" > /opt/service/spark-master/override.env
+spark_config -E -S master
 ```
 
-To initialize the Spark Master, and ensure that the same will start on every
-reboot, the following symbolic link will have to be created:
+After this steps a Spark Master service should be running and configured to
+start on server boot.
 
-```
-ln -s /opt/service/spark-master /etc/service/spark-master
-```
+More option can be used on the instance configuration, see the
+[Configuration Script](#configuration-script) section for more details
 
-After this steps a Spark Master should be configured and running on the server.
-
-#### Configuring a Worker
+#### Configuring a Spark Worker Instance
 
 To prepare an instance to act as a Spark Worker the following steps need to
 be performed.
 
-Create a configuration file, located at /opt/service/spark-master/override.env
-with the required information:
-
-* SPARK_DAEMON_MEMORY is the memory that should be alocated for the Java heap (will default to 512m)
-* SPARK_EXECUTOR_INSTANCES is the number of Spark instances (will default to 1)
-* SPARK_EXECUTOR_CORES is the number of cores per instance that will be available to process jobs (will default to 1)
-* __SPARK_WORKER_PORT__ is the port that will be used by the Spark worker (will default to 42002)
-* __SPARK_MASTER_ADDR__ is the address of the Spark Master to connect to (will default to 127.0.0.1)
-* __SPARK_MASTER_PORT__ is the port of the Spark Master to connect to (will default to 7077)
-
-Here is an example of how the configuration file can be created:
+Run the configuration tool (*spark_config*) to configure the instance as a
+Spark Worker server.
 
 ```
-cat <<EOF > /opt/service/spark-worker/override.env
-SPARK_DAEMON_MEMORY=1g
-SPARK_EXECUTOR_INSTANCES=1
-SPARK_EXECUTOR_CORES=2
-__SPARK_WORKER_PORT__=42002
-__SPARK_MASTER_ADDR__=spark-master.yourdomain.com
-__SPARK_MASTER_PORT__=7077
-EOF
+spark_config -E -S -s spark-master.my-domain.tld worker
 ```
 
-To initialize the Spark Worker, and ensure that the same will start on every
-reboot, the following symbolic link will have to be created:
+After this steps a Spark Worker instance should be running, connected to the
+specified Spark Master address and configured to start on server boot.
+
+More option can be used on the instance configuration, see the
+[Configuration Script](#configuration-script) section for more details
+
+#### Configuring the Spark History Instance
+
+To prepare an instance to act as a Spark History the following steps need to
+be performed.
+
+Run the configuration tool (*spark_config*) to configure the instance as a
+Spark History server.
 
 ```
-ln -s /opt/service/spark-worker /etc/service/spark-worker
+spark_config -E -S history
 ```
 
-After this steps a Spark Worker should be configured and running on the server.
+To be able to use the Spark History service properly every Spark instance needs
+to write the job logs to a shared folder. The shared folder should be mounted
+on the following location on every instance/server (including the History
+instance) and *write* permission needs to be given to the *spark* user
+(uid=2000).
+
+```
+/var/log/spark
+```
+
+After this steps the Spark History service should be running and configured to
+start on server boot.
+
+More option can be used on the instance configuration, see the
+[Configuration Script](#configuration-script) section for more details
 
 ## Services
 
@@ -125,23 +181,23 @@ This AMI will have the SSH service running as well as the Spark (Master and/or
 Worker) services. The following ports will have to be configured on Security
 Groups.
 
-| Service        | Port   | Protocol |
-|----------------|:------:|:--------:|
-| ssh            |   22   |    TCP   |
-| spark (master) |  6066  |    TCP   |
-| spark (master) |  7077  |    TCP   |
-| spark (master) |  8080  |    TCP   |
-| spark (worker) |  4040  |    TCP   |
-| spark (worker) |  8081  |    TCP   |
-| spark (worker) | 42002  |    TCP   |
-| spark          |  ALL   |    TCP   |
+| Service           | Port   | Protocol |
+|:------------------|:------:|:--------:|
+| SSH               | 22     |    TCP   |
+| Spark Application | 4040   |    TCP   |
+| Spark REST Server | 6066   |    TCP   |
+| Spark Master      | 7077   |    TCP   |
+| Spark Master UI   | 8080   |    TCP   |
+| Spark Worker UI   | 8081   |    TCP   |
+| Spark History     | 18080  |    TCP   |
 
 ## Contributing
 
-1. Create your feature branch: `git checkout -b my-new-feature`
-2. Commit your changes: `git commit -am 'Add some feature'`
-3. Push to the branch: `git push origin my-new-feature`
-4. Submit a pull request
+1. Fork it!
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Submit a pull request
 
 ## Versioning
 
@@ -157,5 +213,5 @@ who participated in this project.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/fscm/packer-templates/blob/master/LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/fscm/packer-templates/LICENSE)
 file for details
