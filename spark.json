@@ -14,6 +14,7 @@
     "scala_short_version":  "2.11",
     "scala_version":        "2.11.8",
     "spark_hadoop_version": "{{env `hadoop_version`}}",
+    "spark_uid":            "2000",
     "spark_version":        "{{env `spark_version`}}"
   },
   "builders": [{
@@ -90,8 +91,8 @@
         "sudo gzip -r /opt/scala/man/man1",
         "for program in fsc scala scalac scaladoc scalap; do sudo update-alternatives --install /usr/bin/${program} ${program} /opt/scala/bin/${program} 1 --slave /usr/share/man/man1/${program}.1.gz ${program}.1.gz /opt/scala/man/man1/${program}.1.gz; done",
         "echo === Spark ===",
-        "sudo groupadd -g 2000 spark",
-        "sudo useradd -m -u 2000 -g 2000 -c 'Apache Spark' -s /bin/bash -d /srv/spark spark",
+        "sudo groupadd -g {{user `spark_uid`}} spark",
+        "sudo useradd -m -u {{user `spark_uid`}} -g {{user `spark_uid`}} -c 'Apache Spark' -s /bin/bash -d /srv/spark spark",
         "curl -sL --retry 3 --insecure 'http://d3kbcqa49mib13.cloudfront.net/spark-{{user `spark_version`}}-bin-hadoop{{user `spark_hadoop_version`}}.tgz' | sudo tar xz --strip-components=1 -C /srv/spark/",
         "sudo mkdir -p /srv/spark/{work,tmp}",
         "sudo mkdir -p /var/{log,run}/spark",
