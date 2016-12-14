@@ -121,6 +121,7 @@
         "sudo rm -f /var/log/wtmp",
         "sudo rm -f /var/log/btmp",
         "sudo rm -rf /var/log/installer",
+        "sudo rm -rf /var/lib/cloud/instances",
         "sudo rm -rf /tmp/* /tmp/.*-unix",
         "sudo find /var/cache -type f -delete",
         "sudo find /var/log -type f | while read f; do echo -n '' | sudo tee $f > /dev/null; done;",
