@@ -44,7 +44,6 @@
       "source":      "files/spark/",
       "destination": "/tmp"
     },
-
     {
       "type":           "shell",
       "inline_shebang": "/bin/bash -e",
