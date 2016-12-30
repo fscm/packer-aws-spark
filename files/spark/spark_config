@@ -211,7 +211,7 @@ if [[ "x${SPARK_SERVER_ADDRESS}" != "x" ]]; then
 fi
 
 # Enable the service
-[[ "${SPARK_ENABLE}" -gt 0 ]] && systemctl disable spark-${SPARK_INSTANCE_TYPE}.service
+[[ "${SPARK_ENABLE}" -gt 0 ]] && systemctl enable spark-${SPARK_INSTANCE_TYPE}.service
 
 # Disable the service
 [[ "${SPARK_DISABLE}" -gt 0 ]] && systemctl disable spark-${SPARK_INSTANCE_TYPE}.service
