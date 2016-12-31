@@ -126,7 +126,7 @@ spark_config -E -S master
 After this steps a Spark Master service should be running and configured to
 start on server boot.
 
-More option can be used on the instance configuration, see the
+More options can be used on the instance configuration, see the
 [Configuration Script](#configuration-script) section for more details
 
 #### Configuring a Spark Worker Instance
@@ -144,7 +144,7 @@ spark_config -E -S -s spark-master.my-domain.tld worker
 After this steps a Spark Worker instance should be running, connected to the
 specified Spark Master address and configured to start on server boot.
 
-More option can be used on the instance configuration, see the
+More options can be used on the instance configuration, see the
 [Configuration Script](#configuration-script) section for more details
 
 #### Configuring the Spark History Instance
@@ -172,7 +172,7 @@ instance) and *write* permission needs to be given to the *spark* user
 After this steps the Spark History service should be running and configured to
 start on server boot.
 
-More option can be used on the instance configuration, see the
+More options can be used on the instance configuration, see the
 [Configuration Script](#configuration-script) section for more details
 
 ## Services
