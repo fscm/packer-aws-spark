@@ -15,7 +15,8 @@
     "scala_version":        "2.11.8",
     "spark_hadoop_version": "{{env `hadoop_version`}}",
     "spark_uid":            "2000",
-    "spark_version":        "{{env `spark_version`}}"
+    "spark_version":        "{{env `spark_version`}}",
+    "system_locale":        "en_US"
   },
   "builders": [{
     "type":                        "amazon-ebs",

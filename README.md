@@ -69,6 +69,7 @@ Usage:
 - `scala_version` - Scala version (default value: "2.11.8"). Seting this option may also require setting the `scala_short_version` option.
 - `spark_hadoop_version` - *[required]* Hadoop version of the Spark package.
 - `spark_version` - *[required]* Spark version.
+- `system_locale` - Locale for the system (default value: "en_US").
 
 ### Instantiate a Cluster
 
