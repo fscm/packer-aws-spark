@@ -143,6 +143,7 @@ if [[ $EUID -ne 0 ]]; then
   exit 4
 fi
 
+# Check requirements
 if [[ "${SPARK_ENABLE}" -gt 0 ]] && [[ "${SPARK_DISABLE}" -gt 0 ]]; then
   echo >&2 "  [ERROR] Enable (-e) and Disable (-d) options can not be used together."
   exit 5
