@@ -21,6 +21,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/usr/bin/install -o spark -g spark -d /var/run/spark
 ExecStart=/srv/spark/sbin/start-history-server.sh
 ExecStop=/srv/spark/sbin/stop-history-server.sh
+SyslogIdentifier=sparl-history
 StandardOutput=journal
 StandardError=journal
 LimitNOFILE=infinity

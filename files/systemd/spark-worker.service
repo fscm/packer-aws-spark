@@ -21,6 +21,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/usr/bin/install -o spark -g spark -d /var/run/spark
 ExecStart=/srv/spark/sbin/start-slave.sh spark://localhost:7077
 ExecStop=/srv/spark/sbin/stop-slave.sh
+SyslogIdentifier=spark-worker
 StandardOutput=journal
 StandardError=journal
 LimitNOFILE=infinity

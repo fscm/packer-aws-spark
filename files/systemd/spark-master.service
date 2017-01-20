@@ -21,6 +21,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/usr/bin/install -o spark -g spark -d /var/run/spark
 ExecStart=/srv/spark/sbin/start-master.sh
 ExecStop=/srv/spark/sbin/stop-master.sh
+SyslogIdentifier=spark-master
 StandardOutput=journal
 StandardError=journal
 LimitNOFILE=infinity
