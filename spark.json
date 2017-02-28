@@ -71,6 +71,7 @@
         "echo 'dash dash/sh boolean false' | sudo debconf-set-selections",
         "sudo dpkg-reconfigure -f noninteractive dash",
         "sudo update-locale LC_CTYPE={{user `system_locale`}}.UTF-8",
+        "echo 'export TZ=:/etc/localtime' | sudo tee /etc/profile.d/tz.sh > /dev/null",
         "sudo update-alternatives --set editor /usr/bin/vim.basic",
         "echo === Sysctl ===",
         "sudo cp /tmp/50-spark.conf /etc/sysctl.d/",
@@ -128,7 +129,7 @@
         "sudo rm -rf /tmp/* /var/tmp/* /tmp/.*-unix",
         "sudo find /var/cache -type f -delete",
         "sudo find /var/log -type f | while read f; do echo -n '' | sudo tee $f > /dev/null; done;",
-        "sudo find /var/lib/apt/lists \\! -name lock -type f -delete",
+        "sudo find /var/lib/apt/lists -not -name lock -type f -delete",
         "sudo sync",
         "echo === All Done ==="
       ]
