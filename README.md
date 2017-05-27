@@ -63,9 +63,10 @@ Usage:
 - `aws_instance_type` - The instance type to use for the build (default value: "t2.micro").
 - `aws_region` - *[required]* The regions were the build will be performed.
 - `aws_secret_key` - *[required]* The AWS secret key.
-- `java_build_number` - Java build number (default value: "15").
+- `java_build_number` - Java build number (default value: "11").
 - `java_major_version` - Java major version (default value: "8").
-- `java_update_version` - Java update version (default value: "112").
+- `java_token` - Java link token (default version: "d54c1d3a095b4ff2b6607d096fa80163").
+- `java_update_version` - Java update version (default value: "131").
 - `scala_short_version` - Scala short version (default value: "2.11"). Setting this option also requires setting the `scala_version` option.
 - `scala_version` - Scala version (default value: "2.11.8"). Seting this option may also require setting the `scala_short_version` option.
 - `spark_hadoop_version` - *[required]* Hadoop version of the Spark package.
