@@ -3,7 +3,7 @@ SPARK_PID_DIR="/var/run/spark"
 SPARK_TMP_DIR="/srv/spark/tmp"
 SPARK_HOME=/srv/spark
 
-SPARK_EXECUTOR_MEMORY="$(/usr/bin/awk '/MemTotal/{m=$2*.80;print m"k"}' /proc/meminfo)"
+SPARK_EXECUTOR_MEMORY="$(/usr/bin/awk '/MemTotal/{m=$2*.80;print int(m)"k"}' /proc/meminfo)"
 SPARK_EXECUTOR_INSTANCES="1"
 SPARK_EXECUTOR_CORES="$(/usr/bin/nproc)"
 SPARK_EXECUTOR_DIR="/srv/spark/work"
